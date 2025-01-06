@@ -16,8 +16,8 @@ struct scene_base {
 	}
 };
 struct stripped_scene : scene_base {
-	const std::string& _name;
-	stripped_scene(const std::string& _name) : _name(_name) {}
+	std::string _name;
+	stripped_scene(std::string&& _name) : _name(std::move(_name)) {}
 	const std::string& name() const override {
 		return _name;
 	}
@@ -30,18 +30,21 @@ struct scene_table {
 		decltype([](const scene_base* i) { return i->hash(); }),
 		decltype([](const scene_base* lhs, const scene_base* rhs) {
 		return lhs->name() == rhs->name();
-			})
+		})
 	> table;
-			scene_base*& current_scene;
-			void update() {
-				current_scene->update();
-				if (current_scene->_requested_scene.size()) {
-					stripped_scene key = current_scene->_requested_scene;
-					current_scene->_requested_scene.clear();
-					current_scene = *table.find(static_cast<scene_base*>(&key));
-				}
-			}
-			void draw() {
-				current_scene->draw();
-			}
+	scene_base* current_scene = *(table.begin());
+
+	scene_table(auto&&... args) : table{ static_cast<scene_base*>(&args)...} {}
+
+	void update() {
+		if (current_scene->_requested_scene.size()) [[unlikely]] {
+			stripped_scene key = std::move(current_scene->_requested_scene);
+			current_scene->_requested_scene.clear();
+			current_scene = *table.find(static_cast<scene_base*>(&key));
+		}
+		current_scene->update();
+	}
+	void draw() {
+		current_scene->draw();
+	}
 };

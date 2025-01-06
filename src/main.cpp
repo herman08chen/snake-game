@@ -7,6 +7,9 @@ enum axis { POSX = 1, POSY = 2, POSZ = 3, NEGX = -1, NEGY = -2, NEGZ = -3};
 static constexpr int SIDE = 12;
 static constexpr int HSIDE = 6;
 
+constexpr int screenWidth = 900;
+constexpr int screenHeight = 900;
+
 struct point {
     int x; 
     int y;
@@ -178,71 +181,103 @@ struct game {
 
 };
 
+struct PLAY_SCENE : scene_base {
+    game GAME;
+    Texture2D texture;
+    const std::string _name = "PLAY";
+    Camera camera = { 0 };
 
+    PLAY_SCENE() {
+        texture = LoadTexture("resources/directions.png");
+        camera.position = Vector3{ 20.0f, 20.0f, 20.0f };
+        camera.target = Vector3{ 0.0f, 0.0f, 0.0f };
+        camera.up = Vector3{ 0.0f, 1.0f, 0.0f };
+        camera.fovy = 45.0f;
+        camera.projection = CAMERA_PERSPECTIVE;
+    }
+    ~PLAY_SCENE() {
+        UnloadTexture(texture);
+    }
+
+    const std::string& name() const override { return _name; }
+    void update() override {
+        GAME.update();
+        if (GAME.game_over)  scene_base::request_scene("GAMEOVER");
+    }
+    void draw() override {
+        BeginDrawing();
+
+        ClearBackground(RAYWHITE);
+
+        DrawText(std::format("Score: {}", GAME.score).c_str(), 30, 30, 32, BLACK);
+        DrawTexture(texture, screenWidth / 2 - texture.width / 2, screenHeight / 2 - texture.height / 2, RAYWHITE);
+
+        BeginMode3D(camera);
+
+        draw_grid(GAME.grid);
+
+        GAME.my_snake.draw();
+        draw_coins(GAME.coins);
+
+        EndMode3D();
+
+        EndDrawing();
+    }
+
+};
+
+struct GAMEOVER_SCENE : scene_base {
+    game& GAME;
+    const std::string _name = "GAMEOVER";
+
+    GAMEOVER_SCENE(game& GAME) : GAME(GAME) {}
+    ~GAMEOVER_SCENE() = default;
+
+    const std::string& name() const override { return _name; }
+    void update() override {
+        if (GetKeyPressed()) [[unlikely]] {
+            GAME = game{};
+            scene_base::request_scene("PLAY");
+        }
+    }
+    void draw() override {
+        BeginDrawing();
+
+        ClearBackground(RAYWHITE);
+        DrawText("Game Over!", 30, 30, 32, BLACK);
+        DrawText(std::format("Score: {}", GAME.score).c_str(), 30, 70, 32, BLACK);
+        DrawText("Press any key to try again", 30, 110, 32, BLACK);
+
+        EndDrawing();
+    }
+
+} ;
 
 int main() noexcept
 {
-    constexpr int screenWidth = 900;
-    constexpr int screenHeight = 900;
-
-    SetConfigFlags(FLAG_MSAA_4X_HINT);
     InitAudioDevice();
     InitWindow(screenWidth, screenHeight, "Snake!");
-    Texture2D texture = LoadTexture("resources/directions.png");
     Music music = LoadMusicStream("resources/mini1111.xm");
-    
 
-    Camera camera = { 0 };
-    camera.position = Vector3{ 20.0f, 20.0f, 20.0f }; 
-    camera.target = Vector3{ 0.0f, 0.0f, 0.0f };
-    camera.up = Vector3{ 0.0f, 1.0f, 0.0f };
-    camera.fovy = 45.0f;                              
-    camera.projection = CAMERA_PERSPECTIVE;           
-
-    game GAME;
+    PLAY_SCENE play_scene;
+    GAMEOVER_SCENE gameover_scene(play_scene.GAME);
 
     SetTargetFPS(30);
 
     PlayMusicStream(music);
 
+    scene_table scenes{play_scene, gameover_scene};
+    scenes.current_scene = &play_scene;
+
     // Main game loop
     while (!WindowShouldClose())
     {
         UpdateMusicStream(music);
-        if (GAME.game_over) {
-            BeginDrawing();
-
-            ClearBackground(RAYWHITE);
-            DrawText("Game Over!", 30, 30, 32, BLACK);
-            DrawText(std::format("Score: {}", GAME.score).c_str(), 30, 70, 32, BLACK);
-            DrawText("Press any key to try again", 30, 110, 32, BLACK);
-            
-            EndDrawing();
-            if (GetKeyPressed()) GAME = game{};
-        }
-        else {
-            BeginDrawing();
-
-            ClearBackground(RAYWHITE);
-
-            DrawText(std::format("Score: {}", GAME.score).c_str(), 30, 30, 32, BLACK);
-            DrawTexture(texture, screenWidth / 2 - texture.width / 2, screenHeight / 2 - texture.height / 2, RAYWHITE);
-
-            BeginMode3D(camera);
-
-            draw_grid(GAME.grid);
-
-            GAME.my_snake.draw();
-            draw_coins(GAME.coins);
-
-            EndMode3D();
-
-            EndDrawing();
-            GAME.update();
-        }
+        
+        scenes.draw();
+        scenes.update();
     }
 
-    UnloadTexture(texture);
     UnloadMusicStream(music);
     
     CloseWindow();
