@@ -1,15 +1,6 @@
 #include "raylib.h"
-#include <array>
-#include <utility>
-#include <algorithm>
-#include <list>
-#include <ranges>
-#include <deque>
-#include <unordered_set>
-#include <random>
-#include <bit>
-#include <format>
-#include <iostream>
+#include "scenes.cpp"
+#include <bits/stdc++.h>
 
 enum axis { POSX = 1, POSY = 2, POSZ = 3, NEGX = -1, NEGY = -2, NEGZ = -3};
 
@@ -44,6 +35,7 @@ struct snake {
     std::list<point> cubes {point{}, point{ -1, 0, 0 }, point{ -2, 0, 0 }};
     axis direction = POSX, prev_direction = POSX;
     bool collided = false;
+    
 
     point& head() {
         return cubes.front();
@@ -130,7 +122,8 @@ void draw_coins(const auto& coins) {
 }
 
 struct game {
-    std::array<std::array<std::array<uint8_t, 16>, 16>, 16> grid;
+    std::array<std::array<std::array<uint8_t, 16>, 16>, 16> grid{};
+    Sound coin_sound;
 
     std::unordered_set < point, decltype([](const auto& i) -> std::size_t {
         constexpr std::uint64_t prime{0x100000001B3};
@@ -149,6 +142,13 @@ struct game {
 
     bool game_over = false;
 
+    game() {
+        coin_sound = LoadSound("resources/examples_audio_resources_coin.wav");
+    }
+    ~game() {
+        UnloadSound(coin_sound);
+    }
+
     void update() {
         frame_count++;
         my_snake.update_direction();
@@ -163,23 +163,34 @@ struct game {
                 my_snake.increase_length();
                 coins.erase(it);
                 score++;
+                PlaySound(coin_sound);
             }
             
         }
         if (frame_count % 128 == 0 && coins.size() != 5 && !game_over) {
             auto coin = rand_point();
-            if (!std::ranges::contains(my_snake.cubes, coin)) coins.insert(coin);
+            while (std::ranges::contains(my_snake.cubes, coin)) {
+                coin = rand_point();
+            } 
+            coins.insert(coin);
         }
     }
 
 };
 
-int main(void)
+
+
+int main() noexcept
 {
     constexpr int screenWidth = 900;
     constexpr int screenHeight = 900;
 
+    SetConfigFlags(FLAG_MSAA_4X_HINT);
+    InitAudioDevice();
     InitWindow(screenWidth, screenHeight, "Snake!");
+    Texture2D texture = LoadTexture("resources/directions.png");
+    Music music = LoadMusicStream("resources/mini1111.xm");
+    
 
     Camera camera = { 0 };
     camera.position = Vector3{ 20.0f, 20.0f, 20.0f }; 
@@ -190,21 +201,24 @@ int main(void)
 
     game GAME;
 
-    SetTargetFPS(30);                  
+    SetTargetFPS(30);
+
+    PlayMusicStream(music);
 
     // Main game loop
     while (!WindowShouldClose())
     {
-        
-        if(!GAME.game_over) GAME.update();
-
+        UpdateMusicStream(music);
         if (GAME.game_over) {
             BeginDrawing();
+
             ClearBackground(RAYWHITE);
             DrawText("Game Over!", 30, 30, 32, BLACK);
             DrawText(std::format("Score: {}", GAME.score).c_str(), 30, 70, 32, BLACK);
-
+            DrawText("Press any key to try again", 30, 110, 32, BLACK);
+            
             EndDrawing();
+            if (GetKeyPressed()) GAME = game{};
         }
         else {
             BeginDrawing();
@@ -212,6 +226,7 @@ int main(void)
             ClearBackground(RAYWHITE);
 
             DrawText(std::format("Score: {}", GAME.score).c_str(), 30, 30, 32, BLACK);
+            DrawTexture(texture, screenWidth / 2 - texture.width / 2, screenHeight / 2 - texture.height / 2, RAYWHITE);
 
             BeginMode3D(camera);
 
@@ -223,10 +238,15 @@ int main(void)
             EndMode3D();
 
             EndDrawing();
+            GAME.update();
         }
     }
 
-    CloseWindow();       
+    UnloadTexture(texture);
+    UnloadMusicStream(music);
+    
+    CloseWindow();
+    CloseAudioDevice();
 
     return 0;
 }
