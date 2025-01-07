@@ -3,3 +3,5 @@ hi :3
 i made this game using raylib and c++. 
 
 some (all) of the images/music are not mine
+
+Web version: https://herman08chen.itch.io/3d-snake
