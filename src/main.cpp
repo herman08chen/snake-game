@@ -181,14 +181,42 @@ struct game {
 
 };
 
+struct STARTMENU_SCENE : scene_base {
+    const std::string _name = "STARTMENU";
+    Texture2D texture = LoadTexture("resources/directions.png");
+
+    STARTMENU_SCENE() {};
+    ~STARTMENU_SCENE() {
+        UnloadTexture(texture);
+    }
+
+    const std::string& name() const override { return _name; }
+    void update() override {
+        if (GetKeyPressed()) [[unlikely]] {
+            scene_base::request_scene("PLAY");
+        }
+    }
+    void draw() override {
+        BeginDrawing();
+
+        ClearBackground(RAYWHITE);
+        DrawText("SNAKE 3D!!!!", 30, 30, 64, BLACK);
+        DrawText("by herman chen", 600, 50, 32, BLACK);
+        DrawText("Press any key to play :3", 30, 110, 32, BLACK);
+        DrawTexture(texture, screenWidth / 2 - texture.width / 2, screenHeight / 2 - texture.height / 2, RAYWHITE);
+        DrawText("use your numpad to control the snake", 30, 160, 32, BLACK);
+
+        EndDrawing();
+    }
+};
+
 struct PLAY_SCENE : scene_base {
     game GAME;
-    Texture2D texture;
+    Texture2D texture = LoadTexture("resources/directions.png");
     const std::string _name = "PLAY";
     Camera camera = { 0 };
 
     PLAY_SCENE() {
-        texture = LoadTexture("resources/directions.png");
         camera.position = Vector3{ 20.0f, 20.0f, 20.0f };
         camera.target = Vector3{ 0.0f, 0.0f, 0.0f };
         camera.up = Vector3{ 0.0f, 1.0f, 0.0f };
@@ -210,7 +238,7 @@ struct PLAY_SCENE : scene_base {
         ClearBackground(RAYWHITE);
 
         DrawText(std::format("Score: {}", GAME.score).c_str(), 30, 30, 32, BLACK);
-        DrawTexture(texture, screenWidth / 2 - texture.width / 2, screenHeight / 2 - texture.height / 2, RAYWHITE);
+        //DrawTexture(texture, screenWidth / 2 - texture.width / 2, screenHeight / 2 - texture.height / 2, RAYWHITE);
 
         BeginMode3D(camera);
 
@@ -229,6 +257,7 @@ struct PLAY_SCENE : scene_base {
 struct GAMEOVER_SCENE : scene_base {
     game& GAME;
     const std::string _name = "GAMEOVER";
+    Texture2D texture = LoadTexture("resources/prety_girl.png");
 
     GAMEOVER_SCENE(game& GAME) : GAME(GAME) {}
     ~GAMEOVER_SCENE() = default;
@@ -248,6 +277,11 @@ struct GAMEOVER_SCENE : scene_base {
         DrawText(std::format("Score: {}", GAME.score).c_str(), 30, 70, 32, BLACK);
         DrawText("Press any key to try again", 30, 110, 32, BLACK);
 
+        DrawTexture(texture, screenWidth / 2 - texture.width / 2, screenHeight / 2 - texture.height / 2, RAYWHITE);
+
+        DrawText("\nThanks for playing my game!!", 200, 700, 32, BLACK);
+        DrawText("\nthis game was built by the hopes \nand dreams of an idiot :3", 200, 750, 32, BLACK);
+
         EndDrawing();
     }
 
@@ -259,6 +293,7 @@ int main() noexcept
     InitWindow(screenWidth, screenHeight, "Snake!");
     Music music = LoadMusicStream("resources/mini1111.xm");
 
+    STARTMENU_SCENE startmenu_scene;
     PLAY_SCENE play_scene;
     GAMEOVER_SCENE gameover_scene(play_scene.GAME);
 
@@ -266,10 +301,8 @@ int main() noexcept
 
     PlayMusicStream(music);
 
-    scene_table scenes{play_scene, gameover_scene};
-    scenes.current_scene = &play_scene;
+    scene_table scenes{startmenu_scene, play_scene, gameover_scene};
 
-    // Main game loop
     while (!WindowShouldClose())
     {
         UpdateMusicStream(music);

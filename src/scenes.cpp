@@ -34,7 +34,7 @@ struct scene_table {
 	> table;
 	scene_base* current_scene = *(table.begin());
 
-	scene_table(auto&&... args) : table{ static_cast<scene_base*>(&args)...} {}
+	scene_table(auto&& arg1, auto&&... args) : table{ static_cast<scene_base*>(&arg1), static_cast<scene_base*>(&args)...}, current_scene(static_cast<scene_base*>(&arg1)){}
 
 	void update() {
 		if (current_scene->_requested_scene.size()) [[unlikely]] {
