@@ -1,8 +1,11 @@
-#include "raylib.h"
+#include "F:\VSCode\snake\build\external\raylib-master\src\raylib.h"
 #include "scenes.cpp"
-#include <bits/stdc++.h>
+#include "bits/stdc++.h"
+#include <random>
+#include <format>
+#include <list>
 
-enum axis { POSX = 1, POSY = 2, POSZ = 3, NEGX = -1, NEGY = -2, NEGZ = -3};
+enum axis { POSX = 1, POSY = 2, POSZ = 3, NEGX = -1, NEGY = -2, NEGZ = -3 };
 
 static constexpr int SIDE = 12;
 static constexpr int HSIDE = 6;
@@ -11,7 +14,7 @@ constexpr int screenWidth = 900;
 constexpr int screenHeight = 900;
 
 struct point {
-    int x; 
+    int x;
     int y;
     int z;
     friend bool operator==(const point&, const point&) = default;
@@ -38,7 +41,7 @@ struct snake {
     std::list<point> cubes {point{}, point{ -1, 0, 0 }, point{ -2, 0, 0 }};
     axis direction = POSX, prev_direction = POSX;
     bool collided = false;
-    
+
 
     point& head() {
         return cubes.front();
@@ -49,22 +52,22 @@ struct snake {
     }
 
     void update_direction() {
-        if (IsKeyPressed(KEY_KP_8)) {
+        if (IsKeyPressed(KEY_KP_8) || IsKeyPressed(KEY_W)) {
             direction = POSY;
         }
-        else if (IsKeyPressed(KEY_KP_5)) {
+        else if (IsKeyPressed(KEY_KP_5) || IsKeyPressed(KEY_S)) {
             direction = NEGY;
         }
-        else if (IsKeyPressed(KEY_KP_6)) {
+        else if (IsKeyPressed(KEY_KP_6) || IsKeyPressed(KEY_D)) {
             direction = NEGZ;
         }
-        else if (IsKeyPressed(KEY_KP_4)) {
+        else if (IsKeyPressed(KEY_KP_4) || IsKeyPressed(KEY_A)) {
             direction = POSZ;
         }
-        else if (IsKeyPressed(KEY_KP_3)) {
+        else if (IsKeyPressed(KEY_KP_3) || IsKeyPressed(KEY_C)) {
             direction = POSX;
         }
-        else if (IsKeyPressed(KEY_KP_7)) {
+        else if (IsKeyPressed(KEY_KP_7) || IsKeyPressed(KEY_Q)) {
             direction = NEGX;
         }
     }
@@ -111,8 +114,8 @@ struct snake {
 };
 
 point rand_point() {
-    std::random_device rd;  
-    std::mt19937 gen(rd()); 
+    std::random_device rd;
+    std::mt19937 gen(rd());
     std::uniform_int_distribution<> distrib(-HSIDE, HSIDE);
     return point{ distrib(gen), distrib(gen), distrib(gen) };
 }
@@ -168,13 +171,13 @@ struct game {
                 score++;
                 PlaySound(coin_sound);
             }
-            
+
         }
         if (frame_count % 128 == 0 && coins.size() != 5 && !game_over) {
             auto coin = rand_point();
             while (std::ranges::contains(my_snake.cubes, coin)) {
                 coin = rand_point();
-            } 
+            }
             coins.insert(coin);
         }
     }
@@ -204,7 +207,7 @@ struct STARTMENU_SCENE : scene_base {
         DrawText("by herman chen", 600, 50, 32, BLACK);
         DrawText("Press any key to play :3", 30, 110, 32, BLACK);
         DrawTexture(texture, screenWidth / 2 - texture.width / 2, screenHeight / 2 - texture.height / 2, RAYWHITE);
-        DrawText("use your numpad to control the snake", 30, 160, 32, BLACK);
+        DrawText("use your numpad or WASDQC to control the snake", 30, 160, 32, BLACK);
 
         EndDrawing();
     }
@@ -260,7 +263,9 @@ struct GAMEOVER_SCENE : scene_base {
     Texture2D texture = LoadTexture("resources/prety_girl.png");
 
     GAMEOVER_SCENE(game& GAME) : GAME(GAME) {}
-    ~GAMEOVER_SCENE() = default;
+    ~GAMEOVER_SCENE() {
+        UnloadTexture(texture);
+    }
 
     const std::string& name() const override { return _name; }
     void update() override {
@@ -285,7 +290,7 @@ struct GAMEOVER_SCENE : scene_base {
         EndDrawing();
     }
 
-} ;
+};
 
 int main() noexcept
 {
@@ -301,18 +306,18 @@ int main() noexcept
 
     PlayMusicStream(music);
 
-    scene_table scenes{startmenu_scene, play_scene, gameover_scene};
+    scene_table scenes{ startmenu_scene, play_scene, gameover_scene };
 
     while (!WindowShouldClose())
     {
         UpdateMusicStream(music);
-        
-        scenes.draw();
+
         scenes.update();
+        scenes.draw();
     }
 
     UnloadMusicStream(music);
-    
+
     CloseWindow();
     CloseAudioDevice();
 
