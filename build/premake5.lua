@@ -168,7 +168,11 @@ if (downloadRaylib) then
         links {"raylib"}
 
         cdialect "C99"
-        cppdialect "C++17"
+        cppdialect "C++20"
+
+        filter "system:linux"
+            buildoptions { "-Wall", "-Wextra", "-Wpedantic" }
+        filter {}
 
         includedirs {raylib_dir .. "/src" }
         includedirs {raylib_dir .."/src/external" }
